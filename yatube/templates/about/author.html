@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }}{% endblock title %}
+{% block content %}
+  <h1>Привет, я Дэвид Ливси</h1>
+  <div class="row pt-3">
+    <aside class="col-12 col-md-2 col-sm-12">
+      <img src="{% static 'img/doc_livesy.jpg' %}" width="180" height="180" alt="">
+    </aside>
+    <aside class="col-12 col-md-10 col-sm-12">
+      <p>Очень хороший и веселый человек.</p>
+      <p>Характер общительный. Не женат.</p>
+    </aside>
+  </div>
+{% endblock content %}

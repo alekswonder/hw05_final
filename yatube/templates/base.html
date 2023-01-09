@@ -1,0 +1,27 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  {% include "includes/head.html" %}
+</head>
+<body>
+<header>
+  {% include "includes/header.html" %}
+  <title>
+    {% block title %}
+      Заголовок
+    {% endblock title %}
+  </title>
+</header>
+<main>
+  <div class="container py-5">
+    {% block content %}
+      Текст поста
+    {% endblock content %}
+  </div>
+</main>
+<footer class="border-top text-center py-3">
+  {% include "includes/footer.html" %}
+</footer>
+</body>
+</html>

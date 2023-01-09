@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% load thumbnail %}
+
+{% block title %}Группа "{{ group.title }}"{% endblock title %}
+
+{% block content %}
+  <h1>{{ group.title }}</h1>
+  <h5>{{ group.description|linebreaks }}</h5>
+  {% for post in page_obj %}
+    {% include "posts/includes/post_card.html" %}
+    {% thumbnail post.image "960x399" crop="center" upscale=True as im %}
+      <img src="{{ im.url }}" class="card-img my-2" alt="">
+    {% endthumbnail %}
+    <p>{{ post.text|linebreaks }}</p>
+    <a href="{% url 'posts:post_detail' post.pk %}">подробная информация</a>
+    {% if not forloop.last %}
+      <hr>
+    {% endif %}
+  {% endfor %}
+  {% include "posts/includes/paginator.html" %}
+{% endblock content %}

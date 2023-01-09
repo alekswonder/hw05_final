@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}{{ title }}{% endblock title %}
+{% block content %}
+  <div class="row">
+    <article class="col-12 col-md-6">
+      <p>На этой странице изображены технологии используемые в этом проекте.</p>
+    </article>
+    <aside class="col-12 col-md-3">
+      <ul class="list-group list-group-flush">
+        <li class="list-group-item">
+          <img src="{% static 'img/python_icon.png' %}" width="25" height="25" class="d-inline-block align-top" alt="">
+          Python
+        </li>
+        <li class="list-group-item">
+          <img src="{% static 'img/django_icon.jpg' %}" width="25" height="25" class="d-inline-block align-top" alt="">
+          Django
+        </li>
+      </ul>
+    </aside>
+
+  </div>
+{% endblock content %}

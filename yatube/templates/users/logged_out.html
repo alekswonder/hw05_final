@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}Вы вышли из системы{% endblock %}
+{% block content %}
+  {% include "users/includes/card_init.html" %}
+  <div class="card-header">
+    Выход
+  </div>
+  <div class="card-body">
+    <p>
+      Вы вышли из своей учётной записи. Ждём вас снова!
+    </p>
+  </div>
+  {% include "users/includes/card_end.html" %}
+{% endblock %} 
