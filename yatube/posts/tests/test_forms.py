@@ -10,6 +10,14 @@ from django.urls import reverse
 from posts.models import Comment, Group, Post, User
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
+SMALL_JPG = (
+    b'\x47\x49\x46\x38\x39\x61\x02\x00'
+    b'\x01\x00\x80\x00\x00\x00\x00\x00'
+    b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
+    b'\x00\x00\x00\x2C\x00\x00\x00\x00'
+    b'\x02\x00\x01\x00\x00\x02\x02\x0C'
+    b'\x0A\x00\x3B'
+)
 
 
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
@@ -71,18 +79,10 @@ class PostFormTests(TestCase):
     def test_post_form_create_post(self):
         """Валидная форма создает пост"""
         posts_count = Post.objects.count()
-        small_jpg = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
         uploaded = SimpleUploadedFile(
-            name='small.jpg',
-            content=small_jpg,
-            content_type='image/jpg'
+            name='small.jpeg',
+            content=SMALL_JPG,
+            content_type='image/jpeg'
         )
         form_data = {
             'text': 'Test text',
@@ -99,14 +99,20 @@ class PostFormTests(TestCase):
         self.assertEqual(post.text, form_data['text'])
         self.assertEqual(post.group.pk, form_data['group'])
         self.assertEqual(post.author, self.user)
-        self.assertEqual(str(post.image), f'posts/{form_data["image"].name}')
+        self.assertEqual(post.image, f'posts/{form_data["image"].name}')
 
     def test_post_form_edit_post(self):
         """Валидная форма редактирует пост"""
         post_count = Post.objects.all().count()
+        uploaded = SimpleUploadedFile(
+            name='small.jpg',
+            content=SMALL_JPG,
+            content_type='image/jpg'
+        )
         form_data_edit = {
             'text': 'Edited',
             'group': self.edit_group.pk,
+            'image': uploaded
         }
         response = self.authorized_client.post(
             self.POST_EDIT_REVERSE,
@@ -116,11 +122,10 @@ class PostFormTests(TestCase):
         post = Post.objects.latest('pub_date')
         self.assertRedirects(response, self.POST_DETAIL_REVERSE)
         self.assertEqual(post_count, Post.objects.all().count())
-        self.assertEqual(post.text,
-                         form_data_edit['text'])
-        self.assertEqual(post.group.id,
-                         form_data_edit['group'])
+        self.assertEqual(post.text, form_data_edit['text'])
+        self.assertEqual(post.group.id, form_data_edit['group'])
         self.assertEqual(post.author, self.user)
+        self.assertEqual(post.image, f'posts/{form_data_edit["image"].name}')
 
 
 class CommentFormTest(TestCase):

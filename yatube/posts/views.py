@@ -1,25 +1,18 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.decorators import login_required
-from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, redirect, render
 
-from yatube.settings import AMOUNT_OF_POSTS
-
 from .forms import CommentForm, PostForm
-from .models import Comment, Follow, Group, Post
+from .models import Follow, Group, Post
+from .utils import get_page_obj
 
 User = get_user_model()
-
-
-def get_page_obj(request, queryset, argument):
-    paginator = Paginator(queryset, AMOUNT_OF_POSTS)
-    page_number = request.GET.get(argument)
-    return paginator.get_page(page_number)
 
 
 def index(request):
     post_list = Post.objects.all()
     context = {
+        'index': True,
         'page_obj': get_page_obj(request, post_list, 'page'),
     }
     return render(request, 'posts/index.html', context)
@@ -39,7 +32,8 @@ def profile(request, username):
     author = get_object_or_404(User, username=username)
     post_list = author.posts.select_related('author')
     following = (request.user.is_authenticated
-                 and author.following.filter(user=request.user).exists())
+                 and author.following.filter(user=request.user).exists()
+                 and not request.user.is_anonymous)
     context = {
         'author': author,
         'page_obj': get_page_obj(request, post_list, 'page'),
@@ -51,7 +45,7 @@ def profile(request, username):
 def post_detail(request, post_id):
     post = Post.objects.get(pk=post_id)
     form = CommentForm(request.POST or None)
-    comments = Comment.objects.filter(post=post)
+    comments = post.comments.select_related('post')
     context = {
         'post': post,
         'form': form,
@@ -112,28 +106,25 @@ def add_comment(request, post_id):
 @login_required(login_url='users:login')
 def follow_index(request):
     post_list = Post.objects.filter(author__following__user=request.user)
-    context = {'page_obj': get_page_obj(request, post_list, 'page')}
+    context = {'index': False,
+               'page_obj': get_page_obj(request, post_list, 'page')}
     return render(request, 'posts/follow.html', context)
 
 
 @login_required(login_url='users:login')
 def profile_follow(request, username):
-    redirect_to_profile_page = redirect('posts:profile', username=username)
-    if request.user.username == username:
-        return redirect_to_profile_page
-    following = get_object_or_404(User, username=username)
-    is_follow = Follow.objects.filter(
-        user=request.user,
-        author=following
-    ).exists()
-    if not is_follow:
-        Follow.objects.create(user=request.user, author=following)
-    return redirect_to_profile_page
+    author = get_object_or_404(User, username=username)
+    if request.user != author:
+        Follow.objects.get_or_create(user=request.user, author=author)
+    return redirect('posts:profile', username=username)
 
 
 @login_required(login_url='users:login')
 def profile_unfollow(request, username):
-    following = get_object_or_404(User, username=username)
-    follower = get_object_or_404(Follow, author=following, user=request.user)
+    follower = get_object_or_404(
+        Follow,
+        author=get_object_or_404(User, username=username),
+        user=request.user
+    )
     follower.delete()
     return redirect('posts:profile', username=username)

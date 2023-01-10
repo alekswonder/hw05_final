@@ -5,6 +5,7 @@ from django.urls import reverse
 
 from posts.models import Group, Post, User
 from .test_config import (CREATE_REVERSE, INDEX_REVERSE,
+                          FOLLOW_REVERSE, FOLLOW_URL,
                           CREATE_URL, INDEX_URL, UNEXISTING_PAGE_URL)
 
 
@@ -12,7 +13,8 @@ class PostUrlTests(TestCase):
     @classmethod
     def setUpClass(cls):
         super().setUpClass()
-        cls.user = User.objects.create_user(username='test_user')
+        cls.author = User.objects.create_user(username='test_author')
+        cls.subscriber = User.objects.create_user(username='test_subscriber')
         cls.group = Group.objects.create(
             title='Тестовая группа',
             slug='test-slug',
@@ -21,26 +23,35 @@ class PostUrlTests(TestCase):
         cls.post = Post.objects.create(
             text='Тестовый пост',
             group=cls.group,
-            author=cls.user
+            author=cls.author
         )
         cls.guest = User.objects.create_user(username='guest')
         cls.guest_client = Client()
         cls.authorized_client_author = Client()
         cls.authorized_client_not_author = Client()
-        cls.authorized_client_author.force_login(cls.user)
-        cls.authorized_client_not_author.force_login(cls.guest)
-        cls.GROUP_URL = f'/group/{PostUrlTests.group.slug}/'
+        cls.authorized_client_author.force_login(cls.author)
+        cls.authorized_client_not_author.force_login(cls.subscriber)
+        cls.GROUP_URL = f'/group/{cls.group.slug}/'
         cls.GROUP_REVERSE = reverse('posts:group_posts',
-                                    args=[PostUrlTests.group.slug])
-        cls.PROFILE_URL = f'/profile/{PostUrlTests.user.username}/'
+                                    args=[cls.group.slug])
+        cls.PROFILE_URL = f'/profile/{cls.author.username}/'
         cls.PROFILE_REVERSE = reverse('posts:profile',
-                                      args=[PostUrlTests.user.username])
-        cls.POST_DETAIL_URL = f'/posts/{PostUrlTests.post.pk}/'
+                                      args=[cls.author.username])
+        cls.POST_DETAIL_URL = f'/posts/{cls.post.pk}/'
         cls.POST_DETAIL_REVERSE = reverse('posts:post_detail',
-                                          args=[PostUrlTests.post.pk])
-        cls.POST_EDIT_URL = f'/posts/{PostUrlTests.post.pk}/edit/'
+                                          args=[cls.post.pk])
+        cls.POST_EDIT_URL = f'/posts/{cls.post.pk}/edit/'
         cls.POST_EDIT_REVERSE = reverse('posts:post_edit',
-                                        args=[PostUrlTests.post.pk])
+                                        args=[cls.post.pk])
+        cls.COMMENT_URL = f'{cls.POST_DETAIL_URL}comment/'
+        cls.COMMENT_REVERSE = reverse('posts:add_comment',
+                                      args=[cls.post.pk])
+        cls.PROFILE_FOLLOW_URL = f'/profile/{cls.author.username}/follow/'
+        cls.PROFILE_FOLLOW_REVERSE = reverse('posts:profile_follow',
+                                             args=[cls.author.username])
+        cls.PROFILE_UNFOLLOW_URL = f'/profile/{cls.author.username}/unfollow/'
+        cls.PROFILE_UNFOLLOW_REVERSE = reverse('posts:profile_unfollow',
+                                               args=[cls.author.username])
         cls.GUEST_EDIT_REDIRECT_TO_LOGIN_URL = (
             f'/auth/login/?next='
             f'{cls.POST_EDIT_URL}'
@@ -48,7 +59,6 @@ class PostUrlTests(TestCase):
         cls.GUEST_CREATE_REDIRECT_TO_LOGIN_URL = (
             f'/auth/login/?next={CREATE_URL}'
         )
-        cls.COMMENT_URL = f'{cls.POST_DETAIL_URL}comment/'
         cls.GUEST_COMMENT_REDIRECT_TO_LOGIN_URL = (
             f'/auth/login/?next={cls.COMMENT_URL}'
         )
@@ -62,7 +72,15 @@ class PostUrlTests(TestCase):
             (self.POST_DETAIL_URL, self.guest_client, HTTPStatus.OK),
             (self.POST_EDIT_URL, self.authorized_client_author, HTTPStatus.OK),
             (CREATE_URL, self.authorized_client_not_author, HTTPStatus.OK),
-            (UNEXISTING_PAGE_URL, self.guest_client, HTTPStatus.NOT_FOUND)
+            (UNEXISTING_PAGE_URL, self.guest_client, HTTPStatus.NOT_FOUND),
+            (self.COMMENT_URL, self.authorized_client_not_author,
+             HTTPStatus.FOUND),
+            (FOLLOW_URL, self.authorized_client_not_author, HTTPStatus.OK),
+            (self.PROFILE_FOLLOW_URL, self.authorized_client_not_author,
+             HTTPStatus.FOUND),
+            (self.PROFILE_UNFOLLOW_URL, self.authorized_client_not_author,
+             HTTPStatus.FOUND),
+
         )
         for url, client, response_code in cases:
             with self.subTest(url=url, client=client):
@@ -80,6 +98,12 @@ class PostUrlTests(TestCase):
              self.GUEST_CREATE_REDIRECT_TO_LOGIN_URL),
             (self.COMMENT_URL, self.guest_client,
              self.GUEST_COMMENT_REDIRECT_TO_LOGIN_URL),
+            (self.COMMENT_URL, self.authorized_client_not_author,
+             self.POST_DETAIL_URL),
+            (self.PROFILE_FOLLOW_URL, self.authorized_client_not_author,
+             self.PROFILE_URL),
+            (self.PROFILE_UNFOLLOW_URL, self.authorized_client_not_author,
+             self.PROFILE_URL),
         )
         for url, client, redirect in cases:
             with self.subTest(url=url, client=client):
@@ -93,7 +117,8 @@ class PostUrlTests(TestCase):
             self.PROFILE_REVERSE: 'posts/profile.html',
             self.POST_DETAIL_REVERSE: 'posts/post_detail.html',
             CREATE_REVERSE: 'posts/post_create.html',
-            self.POST_EDIT_REVERSE: 'posts/post_create.html'
+            self.POST_EDIT_REVERSE: 'posts/post_create.html',
+            FOLLOW_REVERSE: 'posts/follow.html',
         }
         for reverse_name, template in page_names_templates.items():
             with self.subTest(reverse_name=reverse_name):

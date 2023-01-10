@@ -5,3 +5,5 @@ INDEX_URL = '/'
 INDEX_REVERSE = reverse('posts:index')
 CREATE_URL = '/create/'
 CREATE_REVERSE = reverse('posts:post_create')
+FOLLOW_URL = '/follow/'
+FOLLOW_REVERSE = reverse('posts:follow_index')

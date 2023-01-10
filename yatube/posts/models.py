@@ -61,13 +61,13 @@ class Comment(models.Model):
         Post,
         on_delete=models.CASCADE,
         verbose_name='Пост',
-        help_text='Пост, к которому относится комментарий'
+        help_text='Пост, к которому относится комментарий',
     )
     author = models.ForeignKey(
         User,
         on_delete=models.CASCADE,
         verbose_name='Автор',
-        help_text='Автор, комментария'
+        help_text='Автор, комментария',
     )
     text = models.TextField()
     created = models.DateTimeField(auto_now_add=True)
@@ -98,6 +98,12 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
+        constraints = [
+            models.UniqueConstraint(fields=['user', 'author'],
+                                    name='unique_follow'),
+            models.CheckConstraint(check=~models.Q(author=models.F('user')),
+                                   name='unique_blocking')
+        ]
 
     def __str__(self):
         return f'Пользователь: {self.user}, подписался на {self.author}'
