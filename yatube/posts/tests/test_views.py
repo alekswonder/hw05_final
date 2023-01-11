@@ -1,66 +1,11 @@
 from django.core.cache import cache
-from django.test import Client, TestCase
-from django.urls import reverse
 
-from posts.models import Follow, Group, Post, User
-from yatube.settings import AMOUNT_OF_POSTS
-from .test_config import INDEX_REVERSE
-
-POSTS_RANGE = 14
+from posts.models import Follow, Post
+from .test_config import (AMOUNT, AMOUNT_OF_POSTS, BaseTestCase, INDEX_REVERSE,
+                          FOLLOW_REVERSE)
 
 
-class PostPagesTest(TestCase):
-    @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
-        cls.AMOUNT = POSTS_RANGE - AMOUNT_OF_POSTS
-        cls.author = User.objects.create_user(username='test_author')
-        cls.follower = User.objects.create_user(username='test_follower')
-        cls.first_group = Group.objects.create(
-            title='First Group',
-            slug='first-group',
-            description='Contains posts with first IDs'
-        )
-        cls.left_group = Group.objects.create(
-            title='Least Group',
-            slug='Left-group',
-            description='Contains posts with left IDs'
-        )
-        cls.posts_left_group = Post.objects.bulk_create(
-            [Post(
-                text=f'Test text of Post №{i}',
-                author=cls.author,
-                group=cls.left_group
-            ) for i in range(1, POSTS_RANGE)]
-        )
-        cls.posts = Post.objects.create(
-            text='First Group Post',
-            author=cls.author,
-            group=cls.first_group
-        )
-        cls.follows = Follow.objects.create(user=cls.follower,
-                                            author=cls.author)
-        cls.authors_client = Client()
-        cls.follower_client = Client()
-        cls.authors_client.force_login(cls.author)
-        cls.follower_client.force_login(cls.follower)
-        cls.LEFT_GROUP_REVERSE = reverse('posts:group_posts',
-                                         args=[cls.left_group.slug])
-        cls.FIRST_GROUP_REVERSE = reverse('posts:group_posts',
-                                          args=[
-                                              cls.first_group.slug])
-        cls.PROFILE_REVERSE = reverse('posts:profile',
-                                      args=[cls.author.username])
-        cls.POST_DETAIL_REVERSE = reverse('posts:post_detail',
-                                          args=[cls.posts.pk])
-        cls.POST_EDIT_REVERSE = reverse('posts:post_edit',
-                                        args=[cls.posts.pk])
-        cls.FOLLOW_INDEX_REVERSE = reverse('posts:follow_index')
-        cls.PROFILE_FOLLOW_REVERSE = reverse('posts:profile_follow',
-                                             args=[cls.author.username])
-        cls.PROFILE_UNFOLLOW_REVERSE = reverse('posts:profile_unfollow',
-                                               args=[cls.author.username])
-
+class PostPagesTest(BaseTestCase):
     def test_first_page_contains_expecting_amount_of_posts(self):
         """Удостоверимся, что на первую страницу передаётся
          ожидаемое количество объектов.
@@ -83,10 +28,10 @@ class PostPagesTest(TestCase):
          ожидаемое количество объектов.
         """
         routes_amounts = {
-            INDEX_REVERSE: self.AMOUNT,
+            INDEX_REVERSE: AMOUNT,
             self.LEFT_GROUP_REVERSE:
                 self.left_group.posts.all().count() - AMOUNT_OF_POSTS,
-            self.PROFILE_REVERSE: self.AMOUNT
+            self.PROFILE_REVERSE: AMOUNT
         }
         for route, amount in routes_amounts.items():
             with self.subTest(route=route):
@@ -161,12 +106,12 @@ class PostPagesTest(TestCase):
         self.assertNotEqual(content_before, content_after)
 
     def test_authorized_user_can_follow_unfollow_authors(self):
-        self.follower_client.get(self.PROFILE_FOLLOW_REVERSE)
+        self.followers_client.get(self.PROFILE_FOLLOW_REVERSE)
         self.assertTrue(Follow.objects.all().exists())
-        self.follower_client.get(self.PROFILE_UNFOLLOW_REVERSE)
+        self.followers_client.get(self.PROFILE_UNFOLLOW_REVERSE)
         self.assertFalse(Follow.objects.all().exists())
 
     def test_authorized_user_can_see_followed_author_posts(self):
-        self.follower_client.get(self.PROFILE_FOLLOW_REVERSE)
-        response = self.follower_client.get(self.FOLLOW_INDEX_REVERSE)
+        self.followers_client.get(self.PROFILE_FOLLOW_REVERSE)
+        response = self.followers_client.get(FOLLOW_REVERSE)
         self.assertEqual(response.context['page_obj'][0].pk, self.posts.pk)
