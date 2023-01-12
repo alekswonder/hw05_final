@@ -6,7 +6,9 @@
 
 {% block content %}
   <h1>Последние обновления на сайте</h1>
-    {% include 'posts/includes/switcher.html' %}
+  {% with index=False %}
+  {% include 'posts/includes/switcher.html' %}
+  {% endwith %}
     {% for post in page_obj %}
       {% include "posts/includes/post_card.html" %}
       {% thumbnail post.image "960x399" crop="center" upscale=True as im %}

@@ -12,7 +12,6 @@ User = get_user_model()
 def index(request):
     post_list = Post.objects.all()
     context = {
-        'index': True,
         'page_obj': get_page_obj(request, post_list, 'page'),
     }
     return render(request, 'posts/index.html', context)
@@ -106,8 +105,7 @@ def add_comment(request, post_id):
 @login_required(login_url='users:login')
 def follow_index(request):
     post_list = Post.objects.filter(author__following__user=request.user)
-    context = {'index': False,
-               'page_obj': get_page_obj(request, post_list, 'page')}
+    context = {'page_obj': get_page_obj(request, post_list, 'page')}
     return render(request, 'posts/follow.html', context)
 
 
